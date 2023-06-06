@@ -1,0 +1,94 @@
+---
+title: "PSTAT 126 Project"
+author: Jeff 
+date: "2023-06-05"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include = FALSE}
+# default code chunk options
+knitr::opts_chunk$set(echo = T,
+                      results = 'markup',
+                      message = F, 
+                      warning = F,
+                      fig.width = 4,
+                      fig.height = 3,
+                      fig.align = 'center') 
+
+# load packages
+library(faraway)
+library(tidyverse)
+library(tidymodels)
+library(modelr)
+library(ggplot2)
+library(glmnet)
+library(skimr)
+```
+## STEP ONE
+
+### 1. Introduction and Description of Relevant Variables
+
+In this project, we will analyze the relationship between income and education using the income.csv dataset. Rather than simply comparing income levels and education levels, we will aggregate the data by calculating the percentage of individuals with income higher then 50k for each education level. This will allow us to create a quantitative variable for the proportion of individuals in each education level who earn a high income, which we can then use to explore the relationship between education and income. The dataset of interest comes from the UCI Machine Learning Repository and is available on Kaggle as well at: https://www.kaggle.com/datasets/uciml/adult-census-income. It contains information about individuals from the 1994 Census database, including demographic variables such as age, education, marital status, occupation, and more.
+
+### 2. Evaluating Summary Statistics
+```{r summary statistics, echo=FALSE}
+# read in csv file 
+income_data <- read.csv("~/Desktop/adult.csv")
+# head(income_data)
+# Display summary statistics using the skimr package
+skim(income_data)
+```
+Based on the provided data summary, the dataset "income_data" contains 32,561 rows and 15 columns. The columns consist of both character and numeric data types. There are 9 columns with character data and 6 columns with numeric data.
+
+The provided table from the skim represents a summary of the variables in the dataset, including their missing values, completeness rate, minimum and maximum values, as well as other relevant information as follows:
+
+  1. **workclass:** This variable has no missing values (0) and a completeness rate of 1 (indicating all values are present). The minimum value is 1, the maximum value is 16, and there are 9 unique values. There are no empty values or whitespace.
+
+  2. **education:** There are no missing values (0) for this variable, and its completeness rate is 1. The variable has a minimum value of 3, a maximum value of 12, and 16 unique values. There are no empty values or whitespace.
+
+  3. **marital.status:** No missing values (0), with a completeness rate of 1. The minimum value is 7, the maximum value is 21, and there are 7 unique values. No empty values or whitespace are found.
+
+  4. **occupation:** No missing values (0) and a completeness rate of 1. The minimum value is 1, the maximum value is 17, and there are 15 unique values. There are no empty values or whitespace.
+
+  5. **relationship:** No missing values (0) and a completeness rate of 1. The minimum value is 4, the maximum value is 14, and there are 6 unique values. No empty values or whitespace are found.
+
+  6. **race:** No missing values (0) and a completeness rate of 1. The minimum value is 5, the maximum value is 18, and there are 5 unique values. No empty values or whitespace are found.
+
+  7. **sex:** No missing values (0) and a completeness rate of 1. The minimum value is 4, the maximum value is 6, and there are 2 unique values. No empty values or whitespace are found.
+
+  8. **native.country:** No missing values (0) and a completeness rate of 1. The minimum value is 1, the maximum value is 26, and there are 42 unique values. No empty values or whitespace are found.
+
+  9. **income:** No missing values (0) and a completeness rate of 1. The minimum value is 4, the maximum value is 5, and there are 2 unique values. No empty values or whitespace are found.
+
+### 3. Graphical Displays
+```{r graphs, fig.show='show', echo=FALSE}
+# Create a histogram of age
+hist(income_data$age, breaks = 20, col = "skyblue", xlab = "Age", main = "Distribution of Age")
+# Create a bar plot of education
+barplot(table(income_data$education), col = "skyblue", xlab = "Education Level", ylab = "Count", main = "Distribution of Education")
+# Create a pie chart of marital status
+marital_status_counts <- table(income_data$marital.status)
+pie(marital_status_counts, labels = names(marital_status_counts), main = "Distribution of Marital Status")
+```
+**Age Histogram:** Looking at the histogram of age, it shows a bell-shaped curve that skews to the right. This indicates that the dataset primarily collected those of a younger age, which may actually affect the income distribution as individuals with a younger age can be assumed to have a lower income, skewing the overall proportional income distribution.
+
+**Education Bar Plot:** The distribution of education seems to be varying across the board, providing a better basis for comparison with income. The bar plot of education levels clearly displays the count of individuals in each category, allowing for a visual understanding of the educational attainment within the dataset. By examining the relationship between education and income, we can assess whether higher levels of education are associated with higher income levels.
+
+**Marriage Level Pie Chart:** The marriage levels are largely dominated by single and married, which skews overall income, and therefore may not be a good variable to use.
+
+### 4. Further Comments
+The data from the "income_data" dataset were approximately as expected based on the analysis conducted. The summary statistics and graphical displays provided insights that align with general assumptions and prior knowledge. For example, the distribution of age exhibited a bell-shaped curve skewed to the right, which is a common observation in demographic data where younger individuals tend to be more prevalent.
+
+Additionally, the distribution of education levels displayed varying proportions across different categories, which is in line with expectations. It is well-known that education attainment levels differ among individuals, and the bar plot effectively depicted the count of individuals in each education category.
+
+Regarding the sampling process, the sample appears to be representative of the population. The variables included in the dataset cover various census demographic aspects such as age, education, marital status, occupation, race, and sex, which are commonly considered when examining income levels. Therefore, the dataset provides a broad representation of the population, allowing for meaningful analysis and insights into the relationship between income and education.
+
+Overall, the data being approximately as expected suggests that the dataset captures the relevant variables and exhibits patterns consistent with general knowledge and assumptions.
+
+
+
+
+
+
