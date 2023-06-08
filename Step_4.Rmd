@@ -1,0 +1,235 @@
+---
+title: "PSTAT 126 Project"
+author: Jeff Shen, Kenneth Villatoro, Christopher Hong, Gavin Wolfe, Omer Randhawa
+date: "2023-06-05"
+output:
+  ioslides_presentation:    
+               widescreen: true    
+               smaller: true    
+               incremental: true
+  pdf_document: default
+  html_document: default
+---
+```{r setup, include = FALSE}
+# default code chunk options
+knitr::opts_chunk$set(echo = T,
+                      results = 'markup',
+                      message = F, 
+                      warning = F,
+                      fig.width = 4,
+                      fig.height = 3,
+                      fig.align = 'center') 
+
+# load packages
+library(faraway)
+library(tidyverse)
+library(tidymodels)
+library(modelr)
+library(ggplot2)
+library(glmnet)
+```
+
+
+## STEP FOUR
+
+### Introduction
+
+In this project, we will analyze the relationship between income and education using the adult.csv dataset. Rather than simply comparing income levels and education levels, we will aggregate the data by calculating the percentage of individuals with income higher then 50k for each education level. This will allow us to create a quantitative variable for the proportion of individuals in each education level who earn a high income, which we can then use to explore the relationship between education and income. The dataset of interest comes from the UCI Machine Learning Repository and is available on Kaggle as well at: https://www.kaggle.com/datasets/uciml/adult-census-income. It contains information about individuals from the 1994 Census database, including demographic variables such as age, education, marital status, occupation, and more.
+
+```{r, results='hide', fig.show='hide', echo=FALSE}
+income_data <- read.csv("~/Desktop/adult.csv")
+head(income_data)
+
+```
+
+### RR and LASSO
+```{r MLR Model, fig.show='show', echo=FALSE}
+
+#Ridge Regression for variables 
+
+#response variable
+y <- income_data$education.num
+
+#define the matrix of the predictor variables
+x <- data.matrix(income_data[, c('age', 'fnlwgt', 'hours.per.week')])
+
+#fit Ridge Regression Model
+model <-glmnet(x,y,alpha=0)
+
+
+#performing k-fold cross_validation in order to find optimal lambda value
+cv_model <- cv.glmnet(x, y, alpha = 0)
+
+#produce plot of test MSE by lambda value
+plot(cv_model)
+
+#find coefficients of best model
+best_model <- glmnet(x, y, alpha = 0, lamba = best_lambda)
+
+#ridge trace plot 
+plot(model, xvar = "lambda")
+
+#find optimal lambda value that minimizes test MSE
+best_lambda <- cv_model$lambda.min
+print(paste('Best Lambda: ', best_lambda))
+#using best fitted model to make predictions
+
+y_predicted <- predict(model, s = best_lambda, newx = x)
+
+#calculating R^2 and SST and SSE
+sst <- sum((y - mean(y))^2)
+sse <- sum((y_predicted - y)^2)
+
+
+r_2 <- 1 - sse/sst
+print(paste('R^2: ', r_2))
+
+
+```
+
+
+```{r LASSO Regression Model, fig.show= 'show', echo = FALSE}
+#LASSO Regression
+
+#response variable
+y <- income_data$education.num
+
+#define the matrix of the predictor variables
+x <- data.matrix(income_data[, c('age', 'fnlwgt', 'hours.per.week')])
+
+# perform k-fold cross validation to find optimal lambda value
+cv_model2 <- cv.glmnet(x, y, alpha = 1)
+
+#producing plot of test MSE by lambda value
+plot(cv_model2)
+
+#find optimal lambda value that minimizes test MSE
+best_lambda2 <- cv_model2$lambda.min
+print(paste('Best Lambda: ', best_lambda2))
+
+#Analyzing final model
+#finding coefficients of best model
+
+best_model2 <- glmnet(x, y, alpha = 1, lambda = best_lambda2)
+# coef(best_model2)
+
+
+#using best fitted model to make predictions
+
+y_predicted2 <- predict(model, s = best_lambda2, newx = x)
+
+
+#calculating R^2 and SST and SSE
+sst <- sum((y - mean(y))^2)
+sse <- sum((y_predicted2 - y)^2)
+
+r_2 <- 1 - sse/sst
+print(paste('R^2: ', r_2))
+
+#the LASSO regression also provides a value for R^2 as 0.0004896063. 
+
+```
+
+
+
+### MLR, RR, LASSO
+```{r Plotted Graph of MLR, LASSO, and Ridge in one, fig.show= 'show', echo= FALSE}
+
+# Load required libraries
+library(glmnet)
+library(ggplot2)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Ridge Regression
+y <- income_data$education.num
+x <- data.matrix(income_data[, c('age', 'fnlwgt', 'hours.per.week')])
+
+# Fit Ridge Regression Model with Cross-Validation
+cv_model_rr <- cv.glmnet(x, y, alpha = 0)
+optimal_lambda_rr <- cv_model_rr$lambda.min
+y_predicted_rr <- as.vector(predict(cv_model_rr, newx = x, s = optimal_lambda_rr))
+
+# LASSO Regression
+cv_model_lasso <- cv.glmnet(x, y, alpha = 1)
+optimal_lambda_lasso <- cv_model_lasso$lambda.min
+y_predicted_lasso <- as.vector(predict(cv_model_lasso, newx = x, s = optimal_lambda_lasso))
+
+# Multiple Linear Regression (MLR)
+model_mlr <- lm(y ~ age + fnlwgt + hours.per.week, data = income_data)
+y_predicted_mlr <- as.vector(predict(model_mlr, newdata = income_data))
+
+# Create data frame for plotting
+data_plot <- data.frame(
+  Observed = y,
+  Predicted_MLR = y_predicted_mlr,
+  Predicted_RR = y_predicted_rr,
+  Predicted_LASSO = y_predicted_lasso
+)
+
+
+# Plot graph
+ggplot(data_plot, aes(x = Observed)) +
+  geom_point(aes(y = y_predicted_mlr, color = "MLR"), alpha = 0.5) +
+  geom_point(aes(y = y_predicted_rr, color = "RR"), alpha = 0.5) +
+  geom_point(aes(y = y_predicted_lasso, color = "LASSO"), alpha = 0.5) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "black") +
+  xlab("Observed") +
+  ylab("Predicted") +
+  scale_color_manual(
+    values = c(MLR = "blue", RR = "red", LASSO = "green"),
+    labels = c(MLR = "Multiple Linear Regression", RR = "Ridge Regression", LASSO = "LASSO")
+  ) +
+  theme_bw()
+
+
+# Commentary on the figure
+# The graph displays the observed response variable (education.num) on the x-axis and the predicted response variable on the y-axis.
+# The blue dots represent the predictions made by the MLR (Multiple Linear Regression) model.
+# The red dots represent the predictions made by the RR (Ridge Regression) model.
+# The green dots represent the predictions made by the LASSO (Least Absolute Shrinkage and Selection Operator) model.
+# By superimposing these predictions, we can visually compare how well each model fits the observed educational levels.
+
+
+```
+
+
+
+### Conclusion
+
+The data collected above provides an insight in how the Ridge Regression and LASSO regression are implied in order to show the types of shrinkage methods used in order to optimize the coefficients for prediction. We see that for Ridge and LASSO regression, the R Squared value for both of these methods is  0.0004896063, thus implying a low variability among the coefficients when shrunk towards 0 (ridge) or at 0 (LASSO). The graph showing the comparison between Multiple Linear Regression, Ridge Regression, and LASSO regression shows that the observed value and the predicted value are almost nearly identical as the abline shown on the plot is nearly vertical.
+
+### Bootstrapping
+```{r Bootstraping, fig.show = 'show', echo=FALSE}
+library(boot)
+y <- income_data$education.num
+x <- data.matrix(income_data[, c('age', 'fnlwgt', 'hours.per.week')])
+
+# Creating Function to obtain R-Squared from the data
+r_squared <- function(formula, data, indices) {
+val <- data[indices,] # selecting sample with boot 
+fit <- lm(formula, data=val)
+return(summary(fit)$r.square)
+} 
+
+# Performing 500 replications with boot 
+output <- boot(data=income_data, statistic=r_squared, 
+R=100, formula= y ~ x)
+
+# Plotting the output
+output 
+plot(output)
+
+# Obtaining a confidence interval of 95%
+boot.ci(output, type="bca")
+
+```
+
+
+The reason we chose to use the Bootstrap model is because this model is a non parametric estimation method ideal for when the distribution of a statistic is unknown or complicated. In our dataset, final weight is classified as a complicated statistic being estimated from multiple parameters. Luckily, the bootstrap method does not ask for specific distribution methods, so finding the correlation between for example education and final weight can be achieved. The output of our bootstrap gives us a better understanding of this comparison as opposed to other methods. 
+
+Bootstrapping is mainly the re sampling of the data provided in order to create more stimulated samples. The purpose of this is to calculate standard errors, t values, and create confidence for a wide set of stimulated samples. It also calculates how variable the model parameters due to the small changes in data values. This affects the regression coefficients and the variation of the parameters. 
+
+The technical specifications for this model can be broken down into a few steps. Firstly being how many samples needed to be performed in order to generate an ideal bootstrap statistic. Next for each sample, we need to specify the sample size. We chose to do 400, thanks to the professor's recommendations as to a quality sample size in class. The next specification is that the bootstrap model calculates a statistic of interest for each sample. Lastly, the mean is calculated from each sample statistic. Without these specifications, the bootstrap statistic cannot be generated correctly. Our bootstrap sample generated what seems to be an appropriate statistic of interest. In our case a t value of 0.024 was generated.
+
